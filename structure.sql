@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS gbif.inaturalist_taxa
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gbif.inaturalist_taxa
-    OWNER to postgres;
+    OWNER to pladias;
 
 CREATE INDEX IF NOT EXISTS taxa_unresolved_idx
     ON gbif.inaturalist_taxa USING btree
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS gbif.inaturalist_records
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gbif.inaturalist_records
-    OWNER to postgres;
+    OWNER to pladias;
 
 CREATE INDEX IF NOT EXISTS observations_created_at_idx
     ON gbif.inaturalist_records USING btree
