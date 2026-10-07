@@ -5,13 +5,17 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime
-from typing import Iterator, Mapping
+from typing import Iterator
 
 from ..config import InaturalistSettings
 from ..http import HttpClient
 from ..models import Observation
 
 logger = logging.getLogger(__name__)
+
+# The v2 API silently caps per_page at 200 records regardless of
+# what is requested, so the effective page size must be clamped.
+MAX_PER_PAGE = 200
 
 # The projection of observation fields we request from the API.
 OBSERVATION_FIELDS = (
@@ -105,19 +109,23 @@ class InaturalistClient:
     ) -> Iterator[list[Observation]]:
         """Yield observations in batches.
 
-        iNaturalist limits normal pagination to 10,000 records,
-        therefore we use id_above as a cursor. created_after is
-        used for the daily incremental import.
+        The v2 API caps per_page at 200 records regardless of what
+        we request, so the effective page size is clamped and also
+        used for the last-page check. iNaturalist limits normal
+        pagination to 10,000 records, therefore we page with an
+        id_above cursor ordered by id; created_after is used for
+        the daily incremental import.
         """
+        page_size = min(self._settings.per_page, MAX_PER_PAGE)
         last_id = 0
         imported = 0
 
         while True:
             params = {
                 "project_id": self._settings.project_id,
-                "per_page": self._settings.per_page,
+                "per_page": page_size,
                 "id_above": last_id,
-                "order_by": "created_at",
+                "order_by": "id",
                 "order": "asc",
                 "fields": OBSERVATION_FIELDS,
             }
@@ -132,8 +140,8 @@ class InaturalistClient:
                 timeout=120,
             )
 
-            total = payload.get("total_results")
-            results = payload.get("results", [])
+            total = payload.get("total_results")  # type: ignore[union-attr]
+            results = payload.get("results", [])  # type: ignore[union-attr]
 
             if not results:
                 break
@@ -141,16 +149,24 @@ class InaturalistClient:
             yield [Observation.from_api(item) for item in results]
 
             imported += len(results)
-            last_id = results[-1]["id"]
+            page_last_id = results[-1]["id"]
 
             logger.info(
                 "Imported %s / %s — last id %s",
                 imported,
                 total if total is not None else "?",
-                last_id,
+                page_last_id,
             )
 
-            if len(results) < self._settings.per_page:
+            if page_last_id <= last_id:
+                raise RuntimeError(
+                    "iNaturalist pagination did not advance "
+                    f"(cursor stuck at {last_id}); aborting."
+                )
+
+            last_id = page_last_id
+
+            if len(results) < page_size:
                 break
 
             # Do not hammer external APIs.

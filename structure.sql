@@ -3,11 +3,9 @@ CREATE TABLE IF NOT EXISTS gbif.inaturalist_taxa
     id bigint NOT NULL,
     name text COLLATE pg_catalog."default" NOT NULL,
     rank text COLLATE pg_catalog."default",
-    col_id bigint,
+    col_id text COLLATE pg_catalog."default",
     col_name text COLLATE pg_catalog."default",
     col_rank text COLLATE pg_catalog."default",
-    gbif_taxon_key bigint,
-    gbif_name text COLLATE pg_catalog."default",
     resolution_status   text NOT NULL DEFAULT 'pending',
     resolved_at timestamp with time zone,
     data jsonb,
@@ -41,9 +39,6 @@ CREATE INDEX taxa_pending_idx
 
 CREATE INDEX taxa_col_id_idx
     ON gbif.inaturalist_taxa (col_id);
-
-CREATE INDEX taxa_gbif_taxon_key_idx
-    ON gbif.inaturalist_taxa (gbif_taxon_key);
 
 
 -----------------------------

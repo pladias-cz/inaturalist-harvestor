@@ -38,10 +38,12 @@ class InaturalistSettings:
 
 
 @dataclass(frozen=True)
-class GbifSettings:
-    """Connection settings for the GBIF API."""
+class ChecklistbankSettings:
+    """Connection settings for the ChecklistBank API."""
 
     api_url: str
+    dataset_id: int
+    dataset_key: str
     request_delay: float
 
 
@@ -63,7 +65,7 @@ class Settings:
     daily_overlap: timedelta
     database: DatabaseSettings
     inaturalist: InaturalistSettings
-    gbif: GbifSettings
+    checklistbank: ChecklistbankSettings
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -99,18 +101,23 @@ class Settings:
                     "INAT_API_URL", "https://api.inaturalist.org/v2"
                 ),
                 project_id=int(env.get("INAT_PROJECT_ID", "183334")),
-                per_page=int(env.get("INAT_PER_PAGE", "1000")),
+                per_page=int(env.get("INAT_PER_PAGE", "200")),
                 username=_required(env, "INAT_USERNAME"),
                 password=_required(env, "INAT_PASSWORD"),
                 client_id=_required(env, "INAT_CLIENT_ID"),
                 client_secret=_required(env, "INAT_CLIENT_SECRET"),
             ),
-            gbif=GbifSettings(
+            checklistbank=ChecklistbankSettings(
                 api_url=env.get(
-                    "GBIF_API_URL", "https://api.gbif.org/v1"
+                    "CHECKLISTBANK_API_URL",
+                    "https://api.checklistbank.org",
                 ),
+                dataset_id=int(
+                    env.get("CHECKLISTBANK_DATASET_ID", "139831")
+                ),
+                dataset_key=env.get("CHECKLISTBANK_DATASET_KEY", "3LR"),
                 request_delay=float(
-                    env.get("GBIF_REQUEST_DELAY", "0.2")
+                    env.get("CHECKLISTBANK_REQUEST_DELAY", "0.2")
                 ),
             ),
         )

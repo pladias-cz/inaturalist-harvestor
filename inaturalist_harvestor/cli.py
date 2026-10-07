@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 
-from .clients.gbif import GbifClient
+from .clients.checklistbank import ChecklistbankClient
 from .clients.inaturalist import (
     InaturalistAuthenticator,
     InaturalistClient,
@@ -67,7 +67,11 @@ def main() -> None:
 
     resolution_service = TaxonResolutionService(
         settings=settings,
-        gbif=GbifClient(http, settings.gbif),
+        checklistbank=ChecklistbankClient(
+            http,
+            settings.checklistbank,
+            settings.inaturalist.site_url,
+        ),
         taxa=taxa,
     )
     resolution_service.run()

@@ -36,7 +36,7 @@ class HttpClient:
         params: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, Any] | list[Any]:
         return self._request(
             "GET", url, params=params, headers=headers, timeout=timeout
         )
@@ -47,7 +47,7 @@ class HttpClient:
         data: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, Any] | list[Any]:
         return self._request(
             "POST", url, data=data, headers=headers, timeout=timeout
         )
@@ -60,7 +60,7 @@ class HttpClient:
         data: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
         timeout: float | None = None,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, Any] | list[Any]:
         timeout = timeout if timeout is not None else self._timeout
 
         while True:

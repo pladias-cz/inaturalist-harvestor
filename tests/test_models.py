@@ -3,7 +3,8 @@
 import unittest
 
 from inaturalist_harvestor.models import (
-    GbifMatch,
+    ColResolution,
+    ColUsage,
     Observation,
     Taxon,
     parse_datetime,
@@ -83,27 +84,69 @@ class ObservationTest(unittest.TestCase):
         self.assertIsNone(observation.longitude)
 
 
-class GbifMatchTest(unittest.TestCase):
+class ColResolutionTest(unittest.TestCase):
+
+    ACCEPTED = {
+        "id": "L3KM",
+        "name": "Battus philenor",
+        "authorship": "(Linnaeus, 1771)",
+        "rank": "species",
+        "code": "zoological",
+        "status": "accepted",
+        "datasetKey": 316321,
+        "label": "Battus philenor (Linnaeus, 1771)",
+        "labelHtml": "<i>Battus philenor</i> (Linnaeus, 1771)",
+        "parentId": "8HD3P",
+    }
+
+    SYNONYM = {
+        "id": "XXXXX",
+        "name": "Papilio philenor",
+        "rank": "species",
+        "status": "synonym",
+    }
 
     def test_matched(self):
-        match = GbifMatch.from_api(
-            {
-                "usageKey": 123,
-                "scientificName": "Ophrys apifera",
-                "matchType": "EXACT",
-                "confidence": 98,
-                "rank": "SPECIES",
-            }
+        resolution = ColResolution.from_related_response([self.ACCEPTED])
+
+        self.assertEqual(resolution.col_id, "L3KM")
+        self.assertEqual(resolution.col_name, "Battus philenor")
+        self.assertEqual(resolution.col_rank, "species")
+        self.assertEqual(resolution.status, "matched")
+
+    def test_first_accepted_wins(self):
+        resolution = ColResolution.from_related_response(
+            [self.SYNONYM, self.ACCEPTED]
         )
 
-        self.assertEqual(match.usage_key, 123)
-        self.assertEqual(match.status, "matched")
+        self.assertEqual(resolution.col_id, "L3KM")
+        self.assertEqual(resolution.status, "matched")
 
-    def test_unmatched(self):
-        match = GbifMatch.from_api({"matchType": "NONE", "confidence": 0})
+    def test_unmatched_without_accepted(self):
+        resolution = ColResolution.from_related_response(
+            [self.SYNONYM]
+        )
 
-        self.assertIsNone(match.usage_key)
-        self.assertEqual(match.status, "unmatched")
+        self.assertIsNone(resolution.col_id)
+        self.assertIsNone(resolution.col_name)
+        self.assertIsNone(resolution.col_rank)
+        self.assertEqual(resolution.status, "unmatched")
+
+    def test_unmatched_empty(self):
+        resolution = ColResolution.from_related_response([])
+
+        self.assertIsNone(resolution.col_id)
+        self.assertEqual(resolution.status, "unmatched")
+
+    def test_usage_from_api(self):
+        usage = ColUsage.from_api(self.ACCEPTED)
+
+        self.assertEqual(usage.id, "L3KM")
+        self.assertEqual(usage.name, "Battus philenor")
+        self.assertEqual(usage.authorship, "(Linnaeus, 1771)")
+        self.assertEqual(usage.rank, "species")
+        self.assertEqual(usage.status, "accepted")
+        self.assertEqual(usage.label, "Battus philenor (Linnaeus, 1771)")
 
 
 if __name__ == "__main__":

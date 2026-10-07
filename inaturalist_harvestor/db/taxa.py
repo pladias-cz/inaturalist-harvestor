@@ -7,7 +7,7 @@ from typing import Sequence
 import psycopg
 from psycopg.types.json import Jsonb
 
-from ..models import GbifMatch, Taxon
+from ..models import ColResolution, Taxon
 from .connection import Database
 from .schema import TAXA_TABLE
 
@@ -36,8 +36,6 @@ _UPSERT_SQL = f"""
 _SAVE_RESOLUTION_SQL = f"""
     UPDATE {TAXA_TABLE}
     SET
-        gbif_taxon_key = %s,
-        gbif_name = %s,
         col_id = %s,
         col_name = %s,
         col_rank = %s,
@@ -50,7 +48,7 @@ _SAVE_RESOLUTION_SQL = f"""
 
 
 class TaxonRepository:
-    """Persists taxa and their GBIF resolutions."""
+    """Persists taxa and their ChecklistBank resolutions."""
 
     def __init__(self, database: Database) -> None:
         self._database = database
@@ -83,7 +81,7 @@ class TaxonRepository:
             cur.executemany(_UPSERT_SQL, rows)
 
     def find_pending(self) -> list[Taxon]:
-        """Return all taxa still awaiting GBIF resolution."""
+        """Return all taxa still awaiting ChecklistBank resolution."""
         with self._database.connect() as conn, conn.cursor() as cur:
             cur.execute(
                 f"""
@@ -102,30 +100,22 @@ class TaxonRepository:
             ]
 
     def save_resolution(
-        self, taxon_id: int, match: GbifMatch
+        self, taxon_id: int, resolution: ColResolution
     ) -> None:
-        """Store a GBIF Species Match result for a taxon."""
+        """Store a ChecklistBank resolution result for a taxon."""
         with self._database.transaction() as conn, conn.cursor() as cur:
             cur.execute(
                 _SAVE_RESOLUTION_SQL,
                 (
-                    match.usage_key,
-                    match.scientific_name,
-                    # Keep CoL ID separate from the GBIF key. The exact
-                    # CoL extraction can be filled from the GBIF
-                    # response / checklist data.
-                    None,
-                    None,
-                    match.rank,
-                    match.status,
+                    resolution.col_id,
+                    resolution.col_name,
+                    resolution.col_rank,
+                    resolution.status,
                     Jsonb(
                         {
-                            "gbif_match": match.data,
-                            "gbif_match_type": match.match_type,
-                            "gbif_confidence": match.confidence,
-                            "gbif_usage_key": match.usage_key,
-                            "gbif_accepted_usage_key":
-                                match.accepted_usage_key,
+                            "checklistbank_related": [
+                                dict(usage) for usage in resolution.data
+                            ],
                         }
                     ),
                     taxon_id,

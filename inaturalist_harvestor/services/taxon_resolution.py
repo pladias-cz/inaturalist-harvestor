@@ -1,11 +1,11 @@
-"""Orchestrates GBIF resolution of pending taxa."""
+"""Orchestrates ChecklistBank resolution of pending taxa."""
 
 from __future__ import annotations
 
 import logging
 import time
 
-from ..clients.gbif import GbifClient
+from ..clients.checklistbank import ChecklistbankClient
 from ..config import Settings
 from ..db.taxa import TaxonRepository
 
@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 class TaxonResolutionService:
-    """Resolves all pending taxa using GBIF Species Match."""
+    """Resolves all pending taxa using ChecklistBank."""
 
     def __init__(
         self,
         settings: Settings,
-        gbif: GbifClient,
+        checklistbank: ChecklistbankClient,
         taxa: TaxonRepository,
     ) -> None:
         self._settings = settings
-        self._gbif = gbif
+        self._checklistbank = checklistbank
         self._taxa = taxa
 
     def run(self) -> None:
@@ -41,8 +41,8 @@ class TaxonResolutionService:
             )
 
             try:
-                match = self._gbif.match_species(taxon.name, taxon.rank)
-                self._taxa.save_resolution(taxon.id, match)
+                resolution = self._checklistbank.resolve(taxon.id)
+                self._taxa.save_resolution(taxon.id, resolution)
             except Exception:
                 logger.exception(
                     "Failed to resolve taxon %s %s",
@@ -50,4 +50,4 @@ class TaxonResolutionService:
                     taxon.name,
                 )
 
-            time.sleep(self._settings.gbif.request_delay)
+            time.sleep(self._settings.checklistbank.request_delay)

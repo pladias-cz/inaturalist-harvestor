@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 
 def parse_datetime(value: str | None) -> datetime | None:
@@ -102,36 +102,88 @@ class Observation:
 
 
 @dataclass(frozen=True)
-class GbifMatch:
-    """Result of a GBIF Species Match request."""
+class ColUsage:
+    """A ChecklistBank name usage related to an iNaturalist taxon."""
 
-    usage_key: int | None
-    accepted_usage_key: int | None
-    scientific_name: str | None
+    id: str
+    name: str | None
+    authorship: str | None
     rank: str | None
-    match_type: str | None
-    confidence: float | None
+    status: str | None
+    label: str | None
     data: Mapping[str, Any]
 
     @classmethod
-    def from_api(cls, payload: Mapping[str, Any]) -> "GbifMatch":
+    def from_api(cls, payload: Mapping[str, Any]) -> "ColUsage":
         return cls(
-            usage_key=payload.get("usageKey"),
-            accepted_usage_key=payload.get("acceptedUsageKey"),
-            scientific_name=payload.get("scientificName"),
+            id=payload["id"],
+            name=payload.get("name"),
+            authorship=payload.get("authorship"),
             rank=payload.get("rank"),
-            match_type=payload.get("matchType"),
-            confidence=payload.get("confidence"),
+            status=payload.get("status"),
+            label=payload.get("label"),
             data=payload,
         )
 
+
+@dataclass(frozen=True)
+class ColResolution:
+    """Result of resolving an iNaturalist taxon via ChecklistBank.
+
+    Wraps the ``/related`` response of the iNaturalist dataset on
+    ChecklistBank and selects the accepted usage, whose id maps to
+    the Catalogue of Life (CoL) identifier of the taxon.
+    """
+
+    usage: ColUsage | None
+    data: tuple[Mapping[str, Any], ...]
+
+    @classmethod
+    def from_related_response(
+        cls, payload: Sequence[Mapping[str, Any]]
+    ) -> "ColResolution":
+        """Pick the first accepted usage from the related usages."""
+
+        accepted = next(
+            (
+                usage
+                for usage in payload
+                if usage.get("status") == "accepted"
+            ),
+            None,
+        )
+
+        return cls(
+            usage=ColUsage.from_api(accepted) if accepted else None,
+            data=tuple(payload),
+        )
+
+    @property
+    def col_id(self) -> str | None:
+        """CoL identifier of the resolved usage (e.g. ``L3KM``)."""
+        if self.usage is not None:
+            return self.usage.id
+        return None
+
+    @property
+    def col_name(self) -> str | None:
+        if self.usage is not None:
+            return self.usage.name
+        return None
+
+    @property
+    def col_rank(self) -> str | None:
+        if self.usage is not None:
+            return self.usage.rank
+        return None
+
     @property
     def status(self) -> str:
-        """Resolution status derived from the match.
+        """Resolution status derived from the related usages.
 
-        We consider an exact / fuzzy / higher-rank GBIF match as
-        "matched". No-match stays explicitly "unmatched".
+        An accepted usage means "matched"; anything else (empty
+        response, synonyms only, ...) stays explicitly "unmatched".
         """
-        if self.usage_key is not None:
+        if self.usage is not None:
             return "matched"
         return "unmatched"

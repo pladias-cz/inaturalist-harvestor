@@ -2,7 +2,7 @@
 
 Cronjob to harvest iNaturalist observations of a specific project
 and store them in PostgreSQL, resolving the referenced taxa against
-GBIF Species Match.
+ChecklistBank (Catalogue of Life).
 
 ## Usage
 
@@ -39,10 +39,12 @@ All settings come from environment variables (see `sample.env`):
 | `DATABASE_URL`       | yes      |                                       | PostgreSQL connection string                   |
 | `IMPORT_MODE`        | no       | `daily`                               | `daily` (incremental) or `full`                 |
 | `INAT_PROJECT_ID`    | no       | `183334`                              | Harvested iNaturalist project                  |
-| `INAT_PER_PAGE`      | no       | `1000`                                | Page size of the observation API               |
+| `INAT_PER_PAGE`      | no       | `200`                                 | Page size of the observation API (v2 caps it at 200) |
 | `REQUEST_DELAY`      | no       | `1`                                   | Seconds between paginated API requests         |
-| `GBIF_REQUEST_DELAY` | no       | `0.2`                                 | Seconds between GBIF Species Match requests    |
-| `GBIF_API_URL`       | no       | `https://api.gbif.org/v1`             | GBIF API base URL                              |
+| `CHECKLISTBANK_REQUEST_DELAY` | no | `0.2`                          | Seconds between ChecklistBank resolution requests |
+| `CHECKLISTBANK_API_URL` | no    | `https://api.checklistbank.org`      | ChecklistBank API base URL                     |
+| `CHECKLISTBANK_DATASET_ID` | no | `139831`                              | ChecklistBank dataset id of iNaturalist        |
+| `CHECKLISTBANK_DATASET_KEY` | no | `3LR`                                 | ChecklistBank key of the target checklist (CoL) |
 | `INAT_SITE_URL`      | no       | `https://www.inaturalist.org`         | iNaturalist site URL                           |
 | `INAT_API_URL`       | no       | `https://api.inaturalist.org/v2`      | iNaturalist API base URL                      |
 | `USER_AGENT`         | no       | `pladias-inaturalist-importer/1.0`    | User-Agent header for outgoing requests        |
@@ -57,7 +59,9 @@ All settings come from environment variables (see `sample.env`):
   records no longer present in the project (`in_project = false`).
 
 After the import, every taxon in state `pending` is resolved against
-the GBIF Species Match service.
+ChecklistBank: the iNaturalist taxon is looked up in the iNaturalist
+dataset (139831) and the related usage with status `accepted` in the
+target dataset (`3LR`, Catalogue of Life) is stored in `col_id`.
 
 ## Architecture
 
@@ -65,11 +69,11 @@ the GBIF Species Match service.
 inaturalist_harvestor/
 ├── cli.py                     composition root: wiring + logging
 ├── config.py                  validated settings from environment
-├── models.py                  domain models (Observation, Taxon, GbifMatch)
+├── models.py                  domain models (Observation, Taxon, ColResolution)
 ├── http.py                    HTTP client with 429 rate-limit back-off
 ├── clients/
 │   ├── inaturalist.py         OAuth → JWT auth + paginated harvesting
-│   └── gbif.py                GBIF Species Match
+│   └── checklistbank.py       ChecklistBank name-usage resolution
 ├── db/
 │   ├── schema.py              physical table names (single source of truth)
 │   ├── connection.py          connection / transaction management

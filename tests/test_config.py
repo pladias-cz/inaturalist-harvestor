@@ -23,8 +23,8 @@ class SettingsTest(unittest.TestCase):
 
         self.assertEqual(settings.import_mode, "daily")
         self.assertEqual(settings.inaturalist.project_id, 183334)
-        self.assertEqual(settings.inaturalist.per_page, 1000)
-        self.assertEqual(settings.gbif.request_delay, 0.2)
+        self.assertEqual(settings.inaturalist.per_page, 200)
+        self.assertEqual(settings.checklistbank.request_delay, 0.2)
         self.assertEqual(
             settings.database.url, "postgresql://localhost/db"
         )
@@ -35,13 +35,13 @@ class SettingsTest(unittest.TestCase):
                 **REQUIRED_ENV,
                 "IMPORT_MODE": "full",
                 "INAT_PROJECT_ID": "999",
-                "GBIF_REQUEST_DELAY": "0.5",
+                "CHECKLISTBANK_REQUEST_DELAY": "0.5",
             }
         )
 
         self.assertEqual(settings.import_mode, "full")
         self.assertEqual(settings.inaturalist.project_id, 999)
-        self.assertEqual(settings.gbif.request_delay, 0.5)
+        self.assertEqual(settings.checklistbank.request_delay, 0.5)
 
     def test_invalid_import_mode(self):
         with self.assertRaises(ConfigurationError):
