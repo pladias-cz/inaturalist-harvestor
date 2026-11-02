@@ -30,25 +30,25 @@ Apply `structure.sql` to the target database once before the first run.
 
 All settings come from environment variables (see `sample.env`):
 
-| Variable             | Required | Default                               | Description                                    |
-| -------------------- | -------- | ------------------------------------- | ---------------------------------------------- |
-| `INAT_USERNAME`      | yes      |                                       | iNaturalist account used for the OAuth grant   |
-| `INAT_PASSWORD`      | yes      |                                       | Password of that account                       |
-| `INAT_CLIENT_ID`     | yes      |                                       | OAuth client ID                                |
-| `INAT_CLIENT_SECRET` | yes      |                                       | OAuth client secret                            |
-| `DATABASE_URL`       | yes      |                                       | PostgreSQL connection string                   |
-| `IMPORT_MODE`        | no       | `daily`                               | `daily` (incremental) or `full`                 |
-| `INAT_PROJECT_ID`    | no       | `183334`                              | Harvested iNaturalist project                  |
-| `INAT_PER_PAGE`      | no       | `200`                                 | Page size of the observation API (v2 caps it at 200) |
-| `REQUEST_DELAY`      | no       | `1`                                   | Seconds between paginated API requests         |
-| `CHECKLISTBANK_REQUEST_DELAY` | no | `0.2`                          | Seconds between ChecklistBank resolution requests |
-| `CHECKLISTBANK_API_URL` | no    | `https://api.checklistbank.org`      | ChecklistBank API base URL                     |
-| `CHECKLISTBANK_DATASET_ID` | no | `139831`                              | ChecklistBank dataset id of iNaturalist        |
-| `CHECKLISTBANK_DATASET_KEY` | no | `3LR`                                 | ChecklistBank key of the target checklist (CoL) |
-| `INAT_SITE_URL`      | no       | `https://www.inaturalist.org`         | iNaturalist site URL                           |
-| `INAT_API_URL`       | no       | `https://api.inaturalist.org/v2`      | iNaturalist API base URL                      |
-| `USER_AGENT`         | no       | `pladias-inaturalist-importer/1.0`    | User-Agent header for outgoing requests        |
-| `LOG_LEVEL`          | no       | `INFO`                                | Logging level                                  |
+| Variable                      | Required | Default                            | Description                                          |
+|-------------------------------|----------|------------------------------------|------------------------------------------------------|
+| `INAT_USERNAME`               | yes      |                                    | iNaturalist account used for the OAuth grant         |
+| `INAT_PASSWORD`               | yes      |                                    | Password of that account                             |
+| `INAT_CLIENT_ID`              | yes      |                                    | OAuth client ID                                      |
+| `INAT_CLIENT_SECRET`          | yes      |                                    | OAuth client secret                                  |
+| `DATABASE_URL`                | yes      |                                    | PostgreSQL connection string                         |
+| `IMPORT_MODE`                 | no       | `daily`                            | `daily` (incremental) or `full`                      |
+| `INAT_PROJECT_ID`             | no       | `183334`                           | Harvested iNaturalist project                        |
+| `INAT_PER_PAGE`               | no       | `200`                              | Page size of the observation API (v2 caps it at 200) |
+| `REQUEST_DELAY`               | no       | `1`                                | Seconds between paginated API requests               |
+| `CHECKLISTBANK_REQUEST_DELAY` | no       | `0.2`                              | Seconds between ChecklistBank resolution requests    |
+| `CHECKLISTBANK_API_URL`       | no       | `https://api.checklistbank.org`    | ChecklistBank API base URL                           |
+| `CHECKLISTBANK_DATASET_ID`    | no       | `139831`                           | ChecklistBank dataset id of iNaturalist              |
+| `CHECKLISTBANK_DATASET_KEY`   | no       | `3LR`                              | ChecklistBank key of the target checklist (CoL)      |
+| `INAT_SITE_URL`               | no       | `https://www.inaturalist.org`      | iNaturalist site URL                                 |
+| `INAT_API_URL`                | no       | `https://api.inaturalist.org/v2`   | iNaturalist API base URL                             |
+| `USER_AGENT`                  | no       | `pladias-inaturalist-importer/1.0` | User-Agent header for outgoing requests              |
+| `LOG_LEVEL`                   | no       | `INFO`                             | Logging level                                        |
 
 ### Import modes
 

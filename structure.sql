@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS gbif.inaturalist_records
     user_login text COLLATE pg_catalog."default",
     latitude double precision,
     longitude double precision,
+    geom geometry(Point, 4326),
     positional_accuracy double precision,
     quality_grade text COLLATE pg_catalog."default",
     species_guess text COLLATE pg_catalog."default",
@@ -98,3 +99,7 @@ CREATE INDEX IF NOT EXISTS observations_user_id_idx
     ON gbif.inaturalist_records USING btree
     (user_id ASC NULLS LAST)
 ;
+
+CREATE INDEX IF NOT EXISTS observations_geom_idx
+    ON gbif.inaturalist_records USING gist
+    (geom)
