@@ -143,6 +143,17 @@ class IterObservationBatchesTest(unittest.TestCase):
             "updated_at:!t", http.requests[0]["params"]["fields"]
         )
 
+    def test_geoprivacy_is_part_of_the_projection(self):
+        # Whether a location may be shown publicly is derived from
+        # geoprivacy, and the v2 API only returns requested fields.
+        client, http = self.make_client([page([], 0)])
+
+        list(client.iter_observation_batches())
+
+        self.assertIn(
+            "geoprivacy:!t", http.requests[0]["params"]["fields"]
+        )
+
     def test_stuck_cursor_raises(self):
         # Pages fill the requested page size (2) so the loop keeps
         # paginating; the second page fails to advance the cursor.

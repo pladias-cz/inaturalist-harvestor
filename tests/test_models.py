@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from inaturalist_harvestor.models import (
     ColResolution,
+    is_location_public,
     ColUsage,
     Observation,
     Taxon,
@@ -58,6 +59,7 @@ class ObservationTest(unittest.TestCase):
         "location": "50.1,14.5",
         "positional_accuracy": 20,
         "quality_grade": "research",
+        "geoprivacy": None,
     }
 
     def test_from_api(self):
@@ -74,10 +76,37 @@ class ObservationTest(unittest.TestCase):
         self.assertEqual(observation.quality_grade, "research")
         self.assertEqual(observation.species_guess, "Bee orchid")
         self.assertEqual(observation.user.login, "naturalist")
+        self.assertTrue(observation.location_visibility)
 
         self.assertIsInstance(observation.taxon, Taxon)
         self.assertEqual(observation.taxon.id, 1)
         self.assertEqual(observation.taxon.name, "Ophrys apifera")
+
+    def test_open_geoprivacy_is_public(self):
+        # The API leaves geoprivacy out (null) for the default open
+        # observations, both spellings are visible locations.
+        for geoprivacy in (None, "", "open"):
+            with self.subTest(geoprivacy=geoprivacy):
+                observation = Observation.from_api(
+                    {**self.PAYLOAD, "geoprivacy": geoprivacy}
+                )
+
+                self.assertTrue(observation.location_visibility)
+
+    def test_hidden_geoprivacy_is_not_public(self):
+        # Obscured observations carry randomised coordinates and
+        # private ones none at all: neither may be shown publicly.
+        for geoprivacy in ("obscured", "private"):
+            with self.subTest(geoprivacy=geoprivacy):
+                observation = Observation.from_api(
+                    {**self.PAYLOAD, "geoprivacy": geoprivacy}
+                )
+
+                self.assertFalse(observation.location_visibility)
+
+    def test_is_location_public_is_case_insensitive(self):
+        self.assertFalse(is_location_public("Obscured"))
+        self.assertTrue(is_location_public("OPEN"))
 
     def test_from_api_without_taxon(self):
         observation = Observation.from_api(

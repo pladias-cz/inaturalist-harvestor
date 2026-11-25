@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS gbif.inaturalist_records
     positional_accuracy double precision,
     quality_grade text COLLATE pg_catalog."default",
     species_guess text COLLATE pg_catalog."default",
+    location_visibility boolean NOT NULL DEFAULT false,
     in_project boolean NOT NULL DEFAULT true,
     last_seen_in_project timestamp with time zone,
     data jsonb NOT NULL,
@@ -74,6 +75,14 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gbif.inaturalist_records
     OWNER to pladias;
+
+-- Databases created before the flag existed get it added here: the
+-- records it tags keep the false default (location not shown
+-- publicly) until a full import re-harvests them and reads their
+-- real geoprivacy.
+ALTER TABLE IF EXISTS gbif.inaturalist_records
+    ADD COLUMN IF NOT EXISTS location_visibility
+    boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS observations_created_at_idx
     ON gbif.inaturalist_records USING btree

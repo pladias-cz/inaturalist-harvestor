@@ -41,7 +41,9 @@ TAXON = Taxon(id=1, name="Ophrys apifera", rank="species", data={})
 
 
 def make_observation(
-    id_: int, quality_grade: str = "research"
+    id_: int,
+    quality_grade: str = "research",
+    location_visibility: bool = True,
 ) -> Observation:
     return Observation(
         id=id_,
@@ -55,6 +57,7 @@ def make_observation(
         positional_accuracy=20,
         quality_grade=quality_grade,
         species_guess="Bee orchid",
+        location_visibility=location_visibility,
         data={"id": id_, "quality_grade": quality_grade},
     )
 
@@ -118,7 +121,8 @@ class ObservationRepositoryTest(unittest.TestCase):
                     SELECT in_project,
                            last_seen_in_project,
                            updated_at,
-                           quality_grade
+                           quality_grade,
+                           location_visibility
                     FROM {RECORDS_TABLE}
                     WHERE id = %s
                     """,
@@ -134,6 +138,7 @@ class ObservationRepositoryTest(unittest.TestCase):
                     "last_seen_in_project",
                     "updated_at",
                     "quality_grade",
+                    "location_visibility",
                 ),
                 row,
             )
@@ -169,6 +174,35 @@ class ObservationRepositoryTest(unittest.TestCase):
 
         self.assertEqual(
             self.fetch_row(1)["quality_grade"], "casual"
+        )
+
+    def test_location_visibility_is_stored(self):
+        # A public location is stored as visible, an obscured or
+        # private one (derived from geoprivacy) as hidden.
+        self.save_batch(
+            [
+                make_observation(1),
+                make_observation(2, location_visibility=False),
+            ],
+            datetime.now(timezone.utc),
+        )
+
+        self.assertTrue(self.fetch_row(1)["location_visibility"])
+        self.assertFalse(self.fetch_row(2)["location_visibility"])
+
+    def test_changed_location_visibility_is_stored(self):
+        first_sync = datetime.now(timezone.utc) - timedelta(hours=2)
+        second_sync = datetime.now(timezone.utc) - timedelta(hours=1)
+
+        self.save_batch(
+            [make_observation(1, location_visibility=False)],
+            first_sync,
+        )
+        # The observer made the location public again.
+        self.save_batch([make_observation(1)], second_sync)
+
+        self.assertTrue(
+            self.fetch_row(1)["location_visibility"]
         )
 
     def test_removal_pass_keeps_observed_and_flags_absent(self):

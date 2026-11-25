@@ -48,6 +48,7 @@ def make_observation(id_: int) -> Observation:
         positional_accuracy=20,
         quality_grade="research",
         species_guess="Bee orchid",
+        location_visibility=True,
         data={"id": id_},
     )
 

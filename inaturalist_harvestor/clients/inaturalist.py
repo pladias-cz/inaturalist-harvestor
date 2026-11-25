@@ -25,7 +25,7 @@ OBSERVATION_FIELDS = (
     "user:(id:!t,login:!t),"
     "latitude:!t,longitude:!t,positional_accuracy:!t,quality_grade:!t,"
     "geojson:(point:!t),private_geojson:(point:!t),"
-    "location:!t,private_location:!t"
+    "location:!t,private_location:!t,geoprivacy:!t"
     ")"
 )
 

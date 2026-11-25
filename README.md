@@ -66,6 +66,24 @@ All settings come from environment variables (see `sample.env`):
   the run enumerated fewer observations than that, which means the
   harvest looks incomplete.
 
+### Location visibility
+
+`location_visibility` records whether iNaturalist publishes the
+coordinates of an observation: it is `false` when the observer set
+the geoprivacy of the observation to `obscured` (the API then
+returns randomised coordinates) or to `private` (it returns no
+coordinates at all), and `true` otherwise. Public renderings must
+use the coordinates of rows with `location_visibility = true` only
+and present the remaining ones as records without a location;
+internal renderings may use all of them.
+
+The flag is refreshed with every upsert, so a full import backfills
+rows harvested before the column existed (they keep its `false`
+default until then). Note that the API reports the accuracy the
+observer entered even for obscured observations, while the point
+itself is displaced by up to ~10 km, so `positional_accuracy` is
+not a lower bound of the error there.
+
 After the import, every taxon in state `pending` is resolved against
 ChecklistBank: the iNaturalist taxon is looked up in the iNaturalist
 dataset (139831) and the related usage with status `accepted` in the

@@ -29,6 +29,24 @@ def parse_location(
         return None, None
 
 
+# Geoprivacies under which iNaturalist does not publish a publicly
+# visible location: "obscured" replaces the coordinates with a
+# randomised ones, "private" withholds them entirely. Any other
+# value - in practice a missing one, which is the "open" default -
+# leaves the location public.
+HIDDEN_LOCATION_GEOPRIVACY = frozenset({"obscured", "private"})
+
+
+def is_location_public(geoprivacy: str | None) -> bool:
+    """Whether the location of an observation may be shown publicly.
+
+    The derived flag is stored as ``location_visibility``: the
+    public interface renders coordinates of visible records only,
+    the internal one renders all of them.
+    """
+    return (geoprivacy or "").lower() not in HIDDEN_LOCATION_GEOPRIVACY
+
+
 @dataclass(frozen=True)
 class Taxon:
     """An iNaturalist taxon as referenced by an observation."""
@@ -71,6 +89,7 @@ class Observation:
     positional_accuracy: float | None
     quality_grade: str | None
     species_guess: str | None
+    location_visibility: bool
     data: Mapping[str, Any]
 
     @classmethod
@@ -97,6 +116,9 @@ class Observation:
             positional_accuracy=payload.get("positional_accuracy"),
             quality_grade=payload.get("quality_grade"),
             species_guess=payload.get("species_guess"),
+            location_visibility=is_location_public(
+                payload.get("geoprivacy")
+            ),
             data=payload,
         )
 
