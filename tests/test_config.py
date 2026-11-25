@@ -43,6 +43,26 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(settings.inaturalist.project_id, 999)
         self.assertEqual(settings.checklistbank.request_delay, 0.5)
 
+    def test_max_removal_ratio_defaults(self):
+        settings = Settings.from_env(REQUIRED_ENV)
+
+        self.assertEqual(settings.max_removal_ratio, 0.2)
+
+    def test_max_removal_ratio_override(self):
+        settings = Settings.from_env(
+            {**REQUIRED_ENV, "MAX_REMOVAL_RATIO": "0.5"}
+        )
+
+        self.assertEqual(settings.max_removal_ratio, 0.5)
+
+    def test_invalid_max_removal_ratio(self):
+        for value in ("0", "-1", "1.5"):
+            with self.subTest(value=value):
+                with self.assertRaises(ConfigurationError):
+                    Settings.from_env(
+                        {**REQUIRED_ENV, "MAX_REMOVAL_RATIO": value}
+                    )
+
     def test_invalid_import_mode(self):
         with self.assertRaises(ConfigurationError):
             Settings.from_env({**REQUIRED_ENV, "IMPORT_MODE": "nope"})

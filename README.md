@@ -41,6 +41,7 @@ All settings come from environment variables (see `sample.env`):
 | `INAT_PROJECT_ID`             | no       | `183334`                           | Harvested iNaturalist project                        |
 | `INAT_PER_PAGE`               | no       | `200`                              | Page size of the observation API (v2 caps it at 200) |
 | `REQUEST_DELAY`               | no       | `1`                                | Seconds between paginated API requests               |
+| `MAX_REMOVAL_RATIO`           | no       | `0.2`                              | Largest share of stored observations one removal pass may flag as removed |
 | `CHECKLISTBANK_REQUEST_DELAY` | no       | `0.2`                              | Seconds between ChecklistBank resolution requests    |
 | `CHECKLISTBANK_API_URL`       | no       | `https://api.checklistbank.org`    | ChecklistBank API base URL                           |
 | `CHECKLISTBANK_DATASET_ID`    | no       | `139831`                           | ChecklistBank dataset id of iNaturalist              |
@@ -57,6 +58,13 @@ All settings come from environment variables (see `sample.env`):
   a full import when the database is empty.
 * `full` — re-synchronizes all project observations and marks
   records no longer present in the project (`in_project = false`).
+  Every observation returned by the feed refreshes
+  `last_seen_in_project`, so a record which is still in the project
+  always survives that removal pass. The pass is skipped with a
+  warning when the harvest returned nothing at all, or when it would
+  flag more than `MAX_REMOVAL_RATIO` of the stored observations while
+  the run enumerated fewer observations than that, which means the
+  harvest looks incomplete.
 
 After the import, every taxon in state `pending` is resolved against
 ChecklistBank: the iNaturalist taxon is looked up in the iNaturalist
@@ -94,3 +102,19 @@ dependencies, so components can be replaced or tested in isolation.
 ```shell
 python -m unittest discover -s tests -v
 ```
+
+The persistence layer is additionally covered by integration tests
+which need a scratch PostgreSQL with PostGIS. They recreate the `gbif`
+schema of the target database from `structure.sql`, so never point them
+at a real database:
+
+```shell
+docker run -d --name harvest-test-db -e POSTGRES_PASSWORD=postgres \
+    -p 127.0.0.1:7788:5432 postgis/postgis:17-3.5
+
+TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:7788/postgres \
+    python -m unittest discover -s tests -v
+```
+
+Without `TEST_DATABASE_URL` those tests are skipped.
+

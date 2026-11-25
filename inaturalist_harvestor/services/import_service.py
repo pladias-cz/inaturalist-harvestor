@@ -62,7 +62,10 @@ class ObservationImportService:
             sync_started_at.isoformat(),
         )
 
-        self._harvest()
+        harvested = self._harvest()
+
+        if not self._removal_is_safe(sync_started_at, harvested):
+            return
 
         removed = self._observations.mark_missing_as_removed(
             sync_started_at
@@ -72,11 +75,65 @@ class ObservationImportService:
             "Marked %d observations as no longer in project.", removed
         )
 
-    def _harvest(self, created_after=None) -> None:
+    def _removal_is_safe(
+        self, sync_started_at: datetime, harvested: int
+    ) -> bool:
+        """Decide whether observations may be flagged as removed.
+
+        The removal pass trusts that the harvest enumerated the whole
+        project, so it is skipped when the harvest looks incomplete:
+        either nothing was harvested at all, or the pass would flag
+        more than the configured share of the table while the run saw
+        fewer observations than that.
+        """
+        if harvested == 0:
+            logger.warning(
+                "Harvest returned no observations, "
+                "skipping the removal pass."
+            )
+            return False
+
+        total = self._observations.count_records()
+        candidates = self._observations.count_not_seen_since(
+            sync_started_at
+        )
+        ratio = candidates / total if total else 0.0
+        limit = self._settings.max_removal_ratio
+
+        # A share above the limit is suspicious only while the pass
+        # would flag more observations than the harvest enumerated: a
+        # healthy run sees far more records than the project has just
+        # lost, while an early stop flags almost all of them.
+        if ratio > limit and candidates > harvested:
+            logger.warning(
+                "Skipping the removal pass: it would flag %d of %d "
+                "observations (%.1f %%) as removed which exceeds both "
+                "the limit of %.1f %% and the %d observations "
+                "harvested by this run.",
+                candidates,
+                total,
+                ratio * 100,
+                limit * 100,
+                harvested,
+            )
+            return False
+
+        return True
+
+    def _harvest(
+        self, created_after: datetime | None = None
+    ) -> int:
+        """Store the harvested observations, return their count."""
+        harvested = 0
+
         for batch in self._client.iter_observation_batches(
             created_after=created_after
         ):
             self._save_batch(batch)
+            harvested += len(batch)
+
+        logger.info("Harvested %d observations.", harvested)
+        return harvested
 
     def _save_batch(
         self, observations: Sequence[Observation]

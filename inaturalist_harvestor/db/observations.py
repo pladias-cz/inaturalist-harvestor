@@ -12,6 +12,10 @@ from ..models import Observation
 from .connection import Database
 from .schema import RECORDS_TABLE
 
+# Every observation returned by the project feed counts as a sighting,
+# so the conflict update must never be conditional. A WHERE-gated update
+# leaves the whole row untouched (including last_seen_in_project), which
+# makes the removal pass flag observations that are still in the project.
 _UPSERT_SQL = f"""
     INSERT INTO {RECORDS_TABLE} (
         id,
@@ -74,11 +78,29 @@ _UPSERT_SQL = f"""
         last_seen_in_project = EXCLUDED.last_seen_in_project,
         data = EXCLUDED.data,
         imported_at = now()
-    WHERE
-        {RECORDS_TABLE}.updated_at
-            IS DISTINCT FROM EXCLUDED.updated_at
-        OR
-        {RECORDS_TABLE}.in_project = false
+"""
+
+# An observation which was not seen by the current full synchronization
+# is no longer in the project. The predicate is shared by the count and
+# the update so the removal pass can be checked before it is applied.
+_MISSING_SINCE_CONDITION = """
+    in_project = true
+    AND (
+        last_seen_in_project IS NULL
+        OR last_seen_in_project < %s
+    )
+"""
+
+_COUNT_MISSING_SQL = f"""
+    SELECT count(*)
+    FROM {RECORDS_TABLE}
+    WHERE {_MISSING_SINCE_CONDITION}
+"""
+
+_MARK_MISSING_SQL = f"""
+    UPDATE {RECORDS_TABLE}
+    SET in_project = false
+    WHERE {_MISSING_SINCE_CONDITION}
 """
 
 
@@ -92,6 +114,25 @@ class ObservationRepository:
         """Return the newest observation creation timestamp, if any."""
         with self._database.connect() as conn, conn.cursor() as cur:
             cur.execute(f"SELECT max(created_at) FROM {RECORDS_TABLE}")
+            return cur.fetchone()[0]
+
+    def count_records(self) -> int:
+        """Return the number of stored observations."""
+        with self._database.connect() as conn, conn.cursor() as cur:
+            cur.execute(f"SELECT count(*) FROM {RECORDS_TABLE}")
+            return cur.fetchone()[0]
+
+    def count_not_seen_since(
+        self, sync_started_at: datetime
+    ) -> int:
+        """Return how many rows the removal pass would flag.
+
+        Used as a sanity check before the removal pass mutates the
+        table, so an incomplete harvest cannot silently mark a large
+        part of the project as removed.
+        """
+        with self._database.connect() as conn, conn.cursor() as cur:
+            cur.execute(_COUNT_MISSING_SQL, (sync_started_at,))
             return cur.fetchone()[0]
 
     def upsert_batch(
@@ -126,19 +167,7 @@ class ObservationRepository:
         number of affected rows.
         """
         with self._database.transaction() as conn, conn.cursor() as cur:
-            cur.execute(
-                f"""
-                UPDATE {RECORDS_TABLE}
-                SET in_project = false
-                WHERE
-                    in_project = true
-                    AND (
-                        last_seen_in_project IS NULL
-                        OR last_seen_in_project < %s
-                    )
-                """,
-                (sync_started_at,),
-            )
+            cur.execute(_MARK_MISSING_SQL, (sync_started_at,))
             return cur.rowcount
 
     @staticmethod

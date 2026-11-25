@@ -1,6 +1,7 @@
 """Tests for domain model parsing."""
 
 import unittest
+from datetime import datetime, timezone
 
 from inaturalist_harvestor.models import (
     ColResolution,
@@ -64,6 +65,10 @@ class ObservationTest(unittest.TestCase):
 
         self.assertEqual(observation.id, 123)
         self.assertEqual(observation.observed_on, "2024-04-30")
+        self.assertEqual(
+            observation.updated_at,
+            datetime(2024, 5, 2, 8, tzinfo=timezone.utc),
+        )
         self.assertEqual(observation.latitude, 50.1)
         self.assertEqual(observation.longitude, 14.5)
         self.assertEqual(observation.quality_grade, "research")

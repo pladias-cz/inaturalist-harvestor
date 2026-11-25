@@ -131,6 +131,18 @@ class IterObservationBatchesTest(unittest.TestCase):
             http.requests[0]["params"]["created_d1"], "2024-05-01"
         )
 
+    def test_updated_at_is_part_of_the_projection(self):
+        # The bookkeeping of observations still present in the project
+        # relies on a real updated_at; the v2 API only returns fields
+        # which were explicitly requested.
+        client, http = self.make_client([page([], 0)])
+
+        list(client.iter_observation_batches())
+
+        self.assertIn(
+            "updated_at:!t", http.requests[0]["params"]["fields"]
+        )
+
     def test_stuck_cursor_raises(self):
         # Pages fill the requested page size (2) so the loop keeps
         # paginating; the second page fails to advance the cursor.

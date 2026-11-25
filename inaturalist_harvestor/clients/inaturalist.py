@@ -20,7 +20,7 @@ MAX_PER_PAGE = 200
 # The projection of observation fields we request from the API.
 OBSERVATION_FIELDS = (
     "("
-    "id:!t,observed_on:!t,created_at:!t,species_guess:!t,"
+    "id:!t,observed_on:!t,created_at:!t,updated_at:!t,species_guess:!t,"
     "taxon:(id:!t,name:!t,rank:!t),"
     "user:(id:!t,login:!t),"
     "latitude:!t,longitude:!t,positional_accuracy:!t,quality_grade:!t,"

@@ -9,6 +9,12 @@ from typing import Mapping
 
 SUPPORTED_IMPORT_MODES = ("daily", "full")
 
+# Upper bound (as a share of all stored observations) of how many
+# observations a single removal pass is allowed to flag as no longer
+# being in the project. Exceeding it means the harvest looks incomplete,
+# so the removal pass is skipped instead of flagging valid data.
+DEFAULT_MAX_REMOVAL_RATIO = 0.2
+
 
 class ConfigurationError(RuntimeError):
     """Raised when the application is misconfigured."""
@@ -63,6 +69,7 @@ class Settings:
     user_agent: str
     request_delay: float
     daily_overlap: timedelta
+    max_removal_ratio: float
     database: DatabaseSettings
     inaturalist: InaturalistSettings
     checklistbank: ChecklistbankSettings
@@ -79,6 +86,17 @@ class Settings:
                 f"{SUPPORTED_IMPORT_MODES}, got {import_mode!r}"
             )
 
+        max_removal_ratio = float(
+            env.get(
+                "MAX_REMOVAL_RATIO", str(DEFAULT_MAX_REMOVAL_RATIO)
+            )
+        )
+        if not 0 < max_removal_ratio <= 1:
+            raise ConfigurationError(
+                "MAX_REMOVAL_RATIO must be greater than 0 and at most 1, "
+                f"got {max_removal_ratio!r}"
+            )
+
         return cls(
             import_mode=import_mode,
             log_level=env.get("LOG_LEVEL", "INFO"),
@@ -90,6 +108,7 @@ class Settings:
             # This makes the import robust against timestamps and
             # interrupted runs.
             daily_overlap=timedelta(days=3),
+            max_removal_ratio=max_removal_ratio,
             database=DatabaseSettings(
                 url=_required(env, "DATABASE_URL"),
             ),
